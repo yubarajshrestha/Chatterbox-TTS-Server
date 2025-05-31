@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en" class="dark"> <!-- Default to dark mode, script will manage preference -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Title will be dynamically set by config, but provide a fallback -->
+    <title>Chatterbox TTS Server</title>
+    <!-- Favicon links (ensure these files exist in your static assets if you use them) -->
+    <!-- <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png"> -->
+    <!-- <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png"> -->
+    <!-- <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png"> -->
+    <!-- <link rel="manifest" href="/static/site.webmanifest"> -->
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Initialize Tailwind CSS with dark mode support and custom theme extensions.
+        // This configuration mirrors the setup from the target interface.
+        tailwind.config = {
+            darkMode: 'class', // Enables class-based dark mode (e.g., <html class="dark">)
+            theme: {
+                extend: {
+                    colors: { // Custom color palette, can be adjusted as needed.
+                        slate: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a', 950: '#020617' },
+                        indigo: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81' },
+                    },
+                    keyframes: { // Custom keyframes for animations.
+                        pulse: { '0%, 100%': { opacity: 1 }, '50%': { opacity: .5 }, }
+                    },
+                    animation: { // Custom animations.
+                        pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- WaveSurfer.js for audio visualization -->
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+
+    <!-- Embedded Tailwind CSS Custom Components and Utilities -->
+    <style type="text/tailwindcss">
+        /* Base styles, components, and utilities imported from Tailwind. */
+        @tailwind base;
+        @tailwind components;
+        @tailwind utilities;
+
+        /* Custom component styles, closely following the target interface's structure. */
+        @layer components {
+            /* --- Base styles (Light Mode Defaults) --- */
+            .body-base { @apply h-full bg-slate-50 text-slate-800 transition-colors duration-300 ease-in-out; }
+            .nav-base { @apply bg-white border-b border-slate-200 shadow-sm sticky top-0 z-40 transition-colors duration-300 ease-in-out; }
+            .nav-link { @apply text-slate-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium transition-colors; }
+            .title-link { @apply text-slate-900 text-2xl font-bold hover:text-indigo-700 transition-colors; } /* For main title */
+            .card-base { @apply bg-white shadow-lg rounded-xl overflow-hidden border border-slate-200/80 transition-colors duration-300 ease-in-out; }
+            .card-header { @apply text-lg font-semibold text-slate-800 mb-4 tracking-tight; }
+            .card-footer { @apply bg-slate-50 px-6 py-4 flex items-center border-t border-slate-200 transition-colors duration-300 ease-in-out; }
+            .label-base { @apply block text-sm font-medium text-slate-700 mb-1.5; }
+            .input-base { @apply block w-full rounded-lg border border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/40 sm:text-sm px-3 py-2 bg-slate-50 text-slate-900 placeholder-slate-400 transition duration-150 ease-in-out; }
+            .textarea-base { @apply input-base min-h-[100px]; } /* min-h can be adjusted */
+            .select-base { @apply input-base appearance-none pr-10; background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-position: right 0.5rem center; background-repeat: no-repeat; background-size: 1.5em 1.5em; }
+            .button-base { @apply inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-200 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0; }
+            .btn-primary { @apply button-base bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 focus:ring-offset-slate-50 shadow-md hover:shadow-lg transform hover:-translate-y-0.5; }
+            .btn-secondary { @apply button-base bg-white text-slate-700 border-slate-300 hover:bg-slate-50 focus:ring-indigo-500 focus:ring-offset-slate-50; }
+            .btn-danger { @apply button-base bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 focus:ring-offset-slate-50 shadow-md hover:shadow-lg transform hover:-translate-y-0.5; }
+            .btn-purple { @apply button-base bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500 focus:ring-offset-slate-50 shadow-md hover:shadow-lg transform hover:-translate-y-0.5; } /* Added for consistency */
+            .slider-base { @apply w-full h-2 bg-slate-200 rounded-full appearance-none cursor-pointer; }
+            .slider-thumb { @apply appearance-none w-5 h-5 bg-indigo-600 rounded-full cursor-pointer shadow transition-colors duration-150 ease-in-out; } /* For browsers that support thumb styling via pseudo-elements */
+            .radio-label { @apply flex items-center space-x-3 cursor-pointer border border-slate-300 bg-white hover:border-indigo-400 p-4 rounded-lg transition-all duration-150 ease-in-out; }
+            .radio-label-text { @apply text-slate-700 font-medium; }
+            .preset-button { @apply inline-flex items-center justify-center px-4 py-1.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 focus:ring-offset-white transition-colors duration-150 ease-in-out cursor-pointer; }
+            .notification-base { @apply px-4 py-3 rounded-lg relative shadow-md flex items-start mb-3 border; } /* Base for all notification types */
+            .notification-icon { @apply h-5 w-5 mr-3 flex-shrink-0; }
+            .notification-success { @apply notification-base bg-green-50 border-green-300 text-green-800; }
+            .notification-success .notification-icon { @apply text-green-500; }
+            .notification-error { @apply notification-base bg-red-50 border-red-300 text-red-800; }
+            .notification-error .notification-icon { @apply text-red-500; }
+            .notification-warning { @apply notification-base bg-yellow-50 border-yellow-300 text-yellow-800; }
+            .notification-warning .notification-icon { @apply text-yellow-500; }
+            .notification-info { @apply notification-base bg-indigo-50 border-indigo-300 text-indigo-800; }
+            .notification-info .notification-icon { @apply text-indigo-500; }
+            .code-inline { @apply bg-slate-100 px-1.5 py-0.5 rounded text-sm font-mono text-indigo-700 border border-slate-200; }
+            .tooltip { @apply absolute hidden group-hover:block bg-slate-700 text-white text-xs rounded py-1 px-2 z-50 -mt-8 shadow-lg; } /* For hover tooltips */
+            .loading-overlay-base { @apply fixed inset-0 bg-slate-600/70 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-300; }
+            .loading-box-base { @apply bg-white p-8 rounded-xl shadow-xl flex flex-col items-center border border-slate-200; }
+            .loading-spinner { @apply h-10 w-10 text-indigo-600 mb-5; } /* Spinner element itself */
+            .loading-text { @apply text-slate-800 text-lg font-medium mb-2; }
+            .loading-status { @apply text-slate-600 text-sm mb-5 text-center max-w-xs; }
+            .waveform-container { @apply w-full h-24 bg-slate-100 rounded-lg border border-slate-200; } /* Container for WaveSurfer */
+            .audio-player-card { @apply card-base mt-8; } /* Card specifically for the audio player */
+            .audio-player-controls { @apply flex flex-wrap items-center justify-between gap-4; }
+            .audio-player-buttons { @apply flex items-center space-x-3; }
+            .audio-player-info { @apply text-sm text-slate-600 text-right; }
+            .theme-switch-button { @apply relative inline-flex items-center p-1 rounded-full bg-slate-200 h-8 w-14 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white; }
+            .theme-switch-thumb { @apply relative rounded-full w-6 h-6 bg-white transform transition-transform duration-200 ease-in-out translate-x-0 flex items-center justify-center shadow-md; }
+            .modal-overlay { @apply fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-300 ease-in-out; }
+            .modal-box { @apply bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 max-w-md w-full; }
+            .modal-title { @apply text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4; }
+            .modal-content { @apply text-sm text-slate-600 dark:text-slate-300 mb-6; }
+            .modal-actions { @apply flex justify-end gap-3; }
+
+            /* --- Dark Mode Overrides --- */
+            .dark .body-base { @apply bg-slate-900 text-slate-300; }
+            .dark .nav-base { @apply bg-gradient-to-r from-slate-900 to-indigo-900 border-b border-slate-700/80 shadow-md; } /* Example gradient nav */
+            .dark .nav-link { @apply text-slate-400 hover:text-indigo-400; }
+            .dark .title-link { @apply text-slate-100 hover:text-indigo-400; }
+            .dark .card-base { @apply bg-slate-800 border border-slate-700/80 shadow-lg shadow-black/20; }
+            .dark .card-header { @apply text-slate-100; }
+            .dark .card-footer { @apply bg-slate-800/50 border-t border-slate-700/80; }
+            .dark .label-base { @apply text-slate-400; }
+            .dark .input-base { @apply border-slate-600 bg-slate-700/50 text-slate-100 placeholder-slate-500 focus:ring-offset-slate-800 focus:border-indigo-400 focus:ring-indigo-400/50; }
+            .dark .select-base { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); }
+            .dark .btn-primary { @apply bg-indigo-500 text-white hover:bg-indigo-400 focus:ring-indigo-400 focus:ring-offset-slate-900; }
+            .dark .btn-secondary { @apply bg-slate-700 text-slate-200 border-slate-600 hover:bg-slate-600 focus:ring-indigo-400 focus:ring-offset-slate-900; }
+            .dark .btn-danger { @apply bg-red-600 text-white hover:bg-red-500 focus:ring-red-500 focus:ring-offset-slate-900; }
+            .dark .btn-purple { @apply bg-purple-500 text-white hover:bg-purple-400 focus:ring-purple-400 focus:ring-offset-slate-900; }
+            .dark .slider-base { @apply bg-slate-700; }
+            .dark .slider-thumb { @apply bg-indigo-500; } /* For browsers that support thumb styling */
+            .dark .radio-label { @apply border-slate-600 bg-slate-800 hover:border-indigo-500; }
+            .dark .radio-label-text { @apply text-slate-300; }
+            .dark .preset-button { @apply bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 focus:ring-indigo-400 focus:ring-offset-slate-800; }
+            .dark .notification-success { @apply notification-base bg-green-950 border-green-700/50 text-green-200; }
+            .dark .notification-success .notification-icon { @apply text-green-400; }
+            .dark .notification-error { @apply notification-base bg-red-950 border-red-700/50 text-red-200; }
+            .dark .notification-error .notification-icon { @apply text-red-500; }
+            .dark .notification-warning { @apply notification-base bg-yellow-950 border-yellow-700/50 text-yellow-200; }
+            .dark .notification-warning .notification-icon { @apply text-yellow-500; }
+            .dark .notification-info { @apply notification-base bg-indigo-950 border-indigo-700/50 text-indigo-200; }
+            .dark .notification-info .notification-icon { @apply text-indigo-400; }
+            .dark .code-inline { @apply bg-slate-700 text-indigo-300 border border-slate-600; }
+            .dark .tooltip { @apply bg-slate-900 text-slate-200; }
+            .dark .loading-overlay-base { @apply bg-slate-900/80 backdrop-blur-sm; }
+            .dark .loading-box-base { @apply bg-slate-800 border border-slate-700; }
+            .dark .loading-spinner { @apply text-indigo-500; }
+            .dark .loading-text { @apply text-slate-100; }
+            .dark .loading-status { @apply text-slate-400; }
+            .dark .waveform-container { @apply bg-slate-800/50 border border-slate-700; }
+            .dark .audio-player-info { @apply text-slate-400; }
+            .dark .theme-switch-button { @apply bg-slate-700 focus:ring-offset-slate-900; }
+            .dark .theme-switch-thumb { @apply bg-indigo-500 translate-x-6; } /* Thumb moves for dark mode */
+        }
+
+        /* Specific slider thumb styling for WebKit and Mozilla */
+        input[type="range"].slider-base::-webkit-slider-thumb { @apply slider-thumb; }
+        input[type="range"].slider-base::-moz-range-thumb { @apply slider-thumb; }
+        .dark input[type="range"].slider-base::-webkit-slider-thumb { background-color: theme('colors.indigo.500'); @apply appearance-none w-5 h-5 rounded-full cursor-pointer shadow; }
+        .dark input[type="range"].slider-base::-moz-range-thumb { background-color: theme('colors.indigo.500'); @apply appearance-none w-5 h-5 rounded-full cursor-pointer shadow; border: none; }
+    </style>
+</head>
+
+<body class="body-base">
+    <div class="min-h-full">
+        <!-- Navigation Bar -->
+        <nav class="nav-base">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="flex h-16 items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <a href="/" id="app-title-link" class="title-link">TTS Server</a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 sm:space-x-4">
+                        <a href="/docs" target="_blank" class="nav-link">API Docs</a>
+                        <button id="theme-toggle-btn" type="button" class="theme-switch-button"
+                            title="Toggle light/dark mode">
+                            <span class="sr-only">Toggle theme</span>
+                            <span class="absolute inset-0 rounded-full transition-colors"></span>
+                            <span class="theme-switch-thumb">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                    class="w-4 h-4 text-yellow-500 opacity-100 dark:opacity-0 transition-opacity duration-200">
+                                    <path fill-rule="evenodd"
+                                        d="M10 2a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 2ZM10 15a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 10 15ZM10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM15.657 4.343a.75.75 0 0 1 0 1.06l-1.06 1.061a.75.75 0 1 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0ZM6.464 13.536a.75.75 0 0 1 0 1.06l-1.06 1.06a.75.75 0 0 1-1.06-1.06l1.06-1.06a.75.75 0 0 1 1.06 0ZM18.25 10a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5a.75.75 0 0 1 .75.75ZM4.25 10a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1 0-1.5h1.5a.75.75 0 0 1 .75.75ZM13.536 6.464a.75.75 0 0 1 1.06 0l1.06 1.06a.75.75 0 0 1-1.06 1.06l-1.06-1.06a.75.75 0 0 1 0-1.06ZM4.343 15.657a.75.75 0 0 1 1.06 0l1.06 1.06a.75.75 0 1 1-1.06 1.06l-1.06-1.06a.75.75 0 0 1 0-1.06Z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                    class="w-4 h-4 text-white absolute inset-0 m-auto opacity-0 dark:opacity-100 transition-opacity duration-200">
+                                    <path fill-rule="evenodd"
+                                        d="M7.455 1.75A8.5 8.5 0 0 1 18.25 12.55a8.5 8.5 0 0 1-8.46 8.46A8.5 8.5 0 0 1 1.75 12.55a8.5 8.5 0 0 1 5.705-10.8Z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main>
+            <div class="mx-auto max-w-7xl px-4 py-1 sm:px-6 lg:px-8">
+
+                <div id="notification-area" class="mb-6 space-y-3"></div>
+
+                <div class="card-base">
+                    <form id="tts-form" action="#" method="post" class="flex flex-col" onsubmit="return false;">
+                        <div class="p-6 sm:p-8">
+                            <h2 id="tts-form-header" class="card-header">Generate Speech</h2>
+
+                            <div class="mb-5">
+                                <label for="text" class="label-base">Text to synthesize</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                                    Enter the text you want to convert to speech. Standard punctuation will be
+                                    recognized.
+                                </p>
+                                <div class="relative">
+                                    <textarea name="text" id="text" rows="5" maxlength="8192" class="textarea-base"
+                                        placeholder="Enter text here..." required></textarea>
+                                    <div class="absolute bottom-2.5 right-3 text-xs text-slate-500 dark:text-slate-400">
+                                        <span id="char-count">0</span> / 8192
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-x-6 gap-y-4 mb-6">
+                                <button type="submit" id="generate-btn" class="btn-primary">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1.5 inline-block">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+                                    </svg>
+                                    Generate Speech
+                                </button>
+                                <label for="split-text-toggle"
+                                    class="flex items-center cursor-pointer text-sm label-base select-none">
+                                    <input type="checkbox" id="split-text-toggle" name="split_text"
+                                        class="mr-2 h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:focus:ring-offset-slate-800 dark:checked:bg-indigo-500 dark:checked:border-indigo-500">
+                                    Split text into chunks
+                                </label>
+                                <div id="chunk-size-controls" class="flex items-center space-x-2 hidden">
+                                    <label for="chunk-size-slider" class="text-sm label-base whitespace-nowrap">Chunk
+                                        Size:</label>
+                                    <input type="range" id="chunk-size-slider" name="chunk_size" min="50" max="1000"
+                                        step="10" value="120" class="slider-base w-32">
+                                    <span id="chunk-size-value"
+                                        class="text-sm font-medium text-slate-700 dark:text-slate-300 w-10 text-right tabular-nums">120</span>
+                                </div>
+                            </div>
+                            <p id="chunk-explanation" class="text-xs text-slate-500 dark:text-slate-400 mb-6 hidden">
+                                Splitting is often useful for very long texts. Ensure voice consistency with Predefined
+                                Voices or Voice Cloning.
+                                Recommended chunk size: ~100-300 characters.
+                            </p>
+
+                            <div class="mb-6">
+                                <label class="label-base mb-2">Voice Mode:</label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <label
+                                        class="radio-label peer-checked:border-indigo-500 peer-checked:dark:border-indigo-500 peer-checked:ring-2 peer-checked:ring-indigo-500/30 peer-checked:dark:ring-indigo-500/40">
+                                        <input type="radio" name="voice_mode" value="predefined" class="hidden peer"
+                                            checked>
+                                        <span
+                                            class="radio-label-text peer-checked:text-indigo-600 dark:peer-checked:text-indigo-400">Predefined
+                                            Voices</span>
+                                    </label>
+                                    <label
+                                        class="radio-label peer-checked:border-indigo-500 peer-checked:dark:border-indigo-500 peer-checked:ring-2 peer-checked:ring-indigo-500/30 peer-checked:dark:ring-indigo-500/40">
+                                        <input type="radio" name="voice_mode" value="clone" class="hidden peer">
+                                        <span
+                                            class="radio-label-text peer-checked:text-indigo-600 dark:peer-checked:text-indigo-400">Voice
+                                            Cloning (Reference)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="predefined-voice-options" class="mb-6">
+                                <label for="predefined-voice-select" class="label-base">Select Predefined Voice:</label>
+                                <div class="flex items-center gap-2">
+                                    <select id="predefined-voice-select" name="predefined_voice_select"
+                                        class="select-base flex-grow">
+                                        <option value="none">-- Select Voice --</option>
+                                    </select>
+                                    <input type="file" id="predefined-voice-file-input" class="hidden" multiple
+                                        accept=".wav,.mp3" aria-label="Upload predefined voice file">
+                                    <button type="button" id="predefined-voice-import-button" class="btn-secondary"
+                                        title="Import new predefined voice files">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                            class="w-5 h-5 mr-1.5">
+                                            <path
+                                                d="M9.25 13.25a.75.75 0 0 0 1.5 0V4.636l2.955 3.129a.75.75 0 0 0 1.09-1.03l-4.25-4.5a.75.75 0 0 0-1.09 0l-4.25 4.5a.75.75 0 1 0 1.09 1.03L9.25 4.636v8.614Z" />
+                                            <path
+                                                d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                                        </svg>
+                                        Import
+                                    </button>
+                                    <button type="button" id="predefined-voice-refresh-button" class="btn-secondary"
+                                        title="Refresh predefined voice list">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                            class="w-5 h-5">
+                                            <path fill-rule="evenodd"
+                                                d="M15.312 11.424a5.5 5.5 0 0 1-9.201-4.42 5.5 5.5 0 0 1 10.89 2.01a.75.75 0 0 1-1.49.174a4 4 0 0 0-7.486-2.641a4 4 0 0 0 6.688 2.947a.75.75 0 0 1 .999.057l-.004-.005ZM4.688 8.576a5.5 5.5 0 0 1 9.201 4.42a5.5 5.5 0 0 1-10.89-2.01a.75.75 0 0 1 1.49-.174a4 4 0 0 0 7.486 2.641a4 4 0 0 0-6.688-2.947a.75.75 0 0 1-.999-.057l.004.005Z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="clone-options" class="mb-6 hidden">
+                                <label for="clone-reference-select" class="label-base">Reference Audio File</label>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                                    Select an uploaded <code class="code-inline">.wav</code> or <code
+                                        class="code-inline">.mp3</code> file.
+                                    For best results, use clean audio recordings.
+                                </p>
+                                <div class="flex items-center gap-2">
+                                    <select id="clone-reference-select" name="clone_reference_select"
+                                        class="select-base flex-grow">
+                                        <option value="none">-- Select Reference File --</option>
+                                    </select>
+                                    <input type="file" id="clone-file-input" class="hidden" multiple accept=".wav,.mp3"
+                                        aria-label="Upload reference audio file">
+                                    <button type="button" id="clone-import-button" class="btn-secondary"
+                                        title="Import new reference files">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                            class="w-5 h-5 mr-1.5">
+                                            <path
+                                                d="M9.25 13.25a.75.75 0 0 0 1.5 0V4.636l2.955 3.129a.75.75 0 0 0 1.09-1.03l-4.25-4.5a.75.75 0 0 0-1.09 0l-4.25 4.5a.75.75 0 1 0 1.09 1.03L9.25 4.636v8.614Z" />
+                                            <path
+                                                d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                                        </svg>
+                                        Import
+                                    </button>
+                                    <button type="button" id="clone-refresh-button" class="btn-secondary"
+                                        title="Refresh reference file list">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"
+                                            class="w-5 h-5">
+                                            <path fill-rule="evenodd"
+                                                d="M15.312 11.424a5.5 5.5 0 0 1-9.201-4.42 5.5 5.5 0 0 1 10.89 2.01a.75.75 0 0 1-1.49.174a4 4 0 0 0-7.486-2.641a4 4 0 0 0 6.688 2.947a.75.75 0 0 1 .999.057l-.004-.005ZM4.688 8.576a5.5 5.5 0 0 1 9.201 4.42a5.5 5.5 0 0 1-10.89-2.01a.75.75 0 0 1 1.49-.174a4 4 0 0 0 7.486 2.641a4 4 0 0 0-6.688-2.947a.75.75 0 0 1-.999-.057l.004.005Z"
+                                                clip-rule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="label-base mb-2">Load Example Preset:</label>
+                                <div id="presets-container" class="flex flex-wrap gap-2">
+                                    <p id="presets-placeholder" class="text-sm text-slate-500 dark:text-slate-400">
+                                        Loading presets...</p>
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <details class="group" open>
+                                    <summary class="list-none flex cursor-pointer items-center group">
+                                        <span
+                                            class="text-sm font-medium label-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Generation
+                                            Parameters</span>
+                                        <span
+                                            class="ml-1.5 text-slate-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">
+                                            <svg class="group-open:rotate-180 h-5 w-5 transition-transform duration-200 ease-in-out"
+                                                viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd"
+                                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                        </span>
+                                    </summary>
+                                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                                        <div>
+                                            <label for="temperature" class="label-base">Temperature (<span
+                                                    id="temperature-value"
+                                                    class="font-semibold tabular-nums">0.8</span>)</label>
+                                            <input type="range" id="temperature" name="temperature" min="0.0" max="1.5"
+                                                step="0.01" value="0.8" class="slider-base">
+                                        </div>
+                                        <div>
+                                            <label for="exaggeration" class="label-base">Exaggeration (<span
+                                                    id="exaggeration-value"
+                                                    class="font-semibold tabular-nums">0.5</span>)</label>
+                                            <input type="range" id="exaggeration" name="exaggeration" min="0.0"
+                                                max="2.0" step="0.01" value="0.5" class="slider-base">
+                                        </div>
+                                        <div>
+                                            <label for="cfg-weight" class="label-base">CFG Weight (<span
+                                                    id="cfg-weight-value"
+                                                    class="font-semibold tabular-nums">0.5</span>)</label>
+                                            <input type="range" id="cfg-weight" name="cfg_weight" min="0.0" max="2.0"
+                                                step="0.01" value="0.5" class="slider-base">
+                                        </div>
+                                        <div>
+                                            <label for="speed-factor" class="label-base">
+                                                Speed Factor (<span id="speed-factor-value"
+                                                    class="font-semibold tabular-nums">1.0</span>)
+                                                <span id="speed-factor-warning"
+                                                    class="text-xs text-yellow-600 dark:text-yellow-400 ml-2 hidden"></span>
+                                            </label>
+                                            <input type="range" id="speed-factor" name="speed_factor" min="0.25"
+                                                max="4.0" step="0.05" value="1.0" class="slider-base">
+                                        </div>
+                                        <div>
+                                            <label for="seed" class="label-base">Generation Seed</label>
+                                            <div class="w-36">
+                                                <input type="number" id="seed" name="seed" value="0"
+                                                    placeholder="0 (or -1 for random)" class="input-base"
+                                                    title="Enter an integer seed for reproducible results, or -1 for random. 0 may also be random depending on engine.">
+                                            </div>
+                                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                                                Integer for reproducible results. Some engines use 0 or -1 for random.
+                                            </p>
+                                        </div>
+                                        <div id="language-select-container">
+                                            <label for="language" class="label-base">Language</label>
+                                            <select id="language" name="language" class="select-base w-36">
+                                                <option value="en">English</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-span-1 md:col-span-2 mt-4 flex items-center gap-4">
+                                            <button id="save-gen-defaults-btn" type="button" class="btn-secondary">Save
+                                                Generation Parameters</button>
+                                            <span id="gen-defaults-status" class="text-xs hidden"></span>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+
+                            <div class="mb-6">
+                                <details class="group" open> <!-- Server Config expanded by default -->
+                                    <summary class="list-none flex cursor-pointer items-center group">
+                                        <span
+                                            class="text-sm font-medium label-base group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Server
+                                            Configuration</span>
+                                        <span
+                                            class="ml-1.5 text-slate-400 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">
+                                            <svg class="group-open:rotate-180 h-5 w-5 transition-transform duration-200 ease-in-out"
+                                                viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd"
+                                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                        </span>
+                                    </summary>
+                                    <div id="server-config-form"
+                                        class="mt-4 border-t border-slate-200 dark:border-slate-700 pt-5">
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                                            These settings are loaded from <code class="code-inline">config.yaml</code>
+                                            via an API call.
+                                            <strong class="font-medium">Restart the server</strong> to apply changes to
+                                            Host, Port, Model, or Path settings if modified here or directly in the
+                                            file.
+                                        </p>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                            <div><label for="config-server-host" class="label-base text-xs">Server
+                                                    Host</label><input type="text" id="config-server-host"
+                                                    name="server.host" class="input-base text-sm"></div>
+                                            <div><label for="config-server-port" class="label-base text-xs">Server
+                                                    Port</label><input type="number" id="config-server-port"
+                                                    name="server.port" class="input-base text-sm"></div>
+                                            <div><label for="config-tts-engine-device" class="label-base text-xs">TTS
+                                                    Device</label><input type="text" id="config-tts-engine-device"
+                                                    name="tts_engine.device" class="input-base text-sm"></div>
+                                            <div><label for="config-tts-engine-default_voice_id"
+                                                    class="label-base text-xs">Default Voice ID</label><input
+                                                    type="text" id="config-tts-engine-default_voice_id"
+                                                    name="tts_engine.default_voice_id" class="input-base text-sm"></div>
+                                            <div><label for="config-paths-model_cache" class="label-base text-xs">Model
+                                                    Cache Path</label><input type="text" id="config-paths-model_cache"
+                                                    name="paths.model_cache" class="input-base text-sm"></div>
+                                            <div><label for="config-tts-engine-predefined_voices_path"
+                                                    class="label-base text-xs">Predefined Voices Path</label><input
+                                                    type="text" id="config-tts-engine-predefined_voices_path"
+                                                    name="tts_engine.predefined_voices_path" class="input-base text-sm">
+                                            </div>
+                                            <div><label for="config-tts-engine-reference_audio_path"
+                                                    class="label-base text-xs">Reference Audio Path</label><input
+                                                    type="text" id="config-tts-engine-reference_audio_path"
+                                                    name="tts_engine.reference_audio_path" class="input-base text-sm">
+                                            </div>
+                                            <div><label for="config-paths-output" class="label-base text-xs">Output
+                                                    Path</label><input type="text" id="config-paths-output"
+                                                    name="paths.output" class="input-base text-sm"></div>
+                                            <div><label for="config-audio_output-format"
+                                                    class="label-base text-xs">Audio Output Format</label><input
+                                                    type="text" id="config-audio_output-format"
+                                                    name="audio_output.format" class="input-base text-sm"></div>
+                                            <div><label for="config-audio_output-sample_rate"
+                                                    class="label-base text-xs">Audio Sample Rate</label><input
+                                                    type="number" id="config-audio_output-sample_rate"
+                                                    name="audio_output.sample_rate" class="input-base text-sm"></div>
+
+                                            <div
+                                                class="col-span-1 md:col-span-2 mt-4 flex flex-col md:flex-row gap-4 items-center">
+                                                <button id="save-config-btn" type="button"
+                                                    class="btn-purple w-full md:w-auto">Save Server
+                                                    Configuration</button>
+                                                <button id="restart-server-btn" type="button"
+                                                    class="btn-danger w-full md:w-auto hidden">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none"
+                                                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                                                        class="w-5 h-5 mr-1.5 inline-block">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                                                    </svg>
+                                                    Restart Server
+                                                </button>
+                                                <span id="config-status" class="text-xs ml-2 hidden"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+                            </div>
+                        </div>
+
+                        <div class="card-footer">
+                            <button id="reset-settings-btn" type="button" class="btn-secondary text-xs"
+                                title="Reset all UI and generation settings to their defaults from config.yaml.">
+                                Reset All Settings
+                            </button>
+                            <div class="text-xs text-slate-500 dark:text-slate-400 ml-2">
+                                Resets settings to their defaults.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="audio-player-container" class="mt-8"></div>
+
+                <div class="mt-10">
+                    <h2 class="card-header mb-4 text-base font-semibold">Tips & Tricks</h2>
+                    <div class="card-base">
+                        <div class="p-6 sm:p-8">
+                            <ul class="list-disc space-y-2.5 pl-5 text-sm text-slate-700 dark:text-slate-300">
+                                <li>Use **Predefined Voices** for consistent, high-quality output. You can import new
+                                    ones.</li>
+                                <li>For **Voice Cloning**, upload clean reference audio (<code
+                                        class="code-inline">.wav</code>/<code class="code-inline">.mp3</code>). Quality
+                                    of reference is key.</li>
+                                <li>Experiment with **Temperature** and other generation parameters to fine-tune output.
+                                </li>
+                                <li>Enable **Split text** for very long inputs. Max chunk size is now 1000 characters.
+                                </li>
+                                <li>Adjusting **Speed Factor** away from 1.0 is experimental and may cause echo.</li>
+                                <li>Check the <code class="code-inline">/docs</code> endpoint for API details.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="bg-slate-100 dark:bg-slate-800 py-8 mt-16 border-t border-slate-200 dark:border-slate-700/80">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-center">
+                    <a href="https://github.com/devnen/Chatterbox-TTS-Server" target="_blank" rel="noopener noreferrer"
+                        class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor"
+                            viewBox="0 0 16 16" class="flex-shrink-0">
+                            <path
+                                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+                        </svg>
+                        <span>View Project on GitHub | Powered by FastAPI</span>
+                    </a>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <div id="loading-overlay" class="loading-overlay-base hidden opacity-0" data-state="closed">
+        <div class="loading-box-base">
+            <svg class="loading-spinner animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            <p id="loading-message" class="loading-text">Generating audio...</p>
+            <p id="loading-status" class="loading-status">Please wait.</p>
+            <button id="loading-cancel-btn" type="button" class="btn-secondary mt-1"
+                title="Cancel UI request. Backend may continue briefly.">Cancel</button>
+        </div>
+    </div>
+
+    <div id="chunk-warning-modal" class="modal-overlay hidden opacity-0" data-state="closed">
+        <div class="modal-box">
+            <h3 class="modal-title">Chunking Voice Consistency Warning</h3>
+            <div class="modal-content">
+                <p>You are generating with text splitting enabled and not using Predefined Voices or Voice Cloning with
+                    a fixed seed.</p>
+                <p class="mt-2">This combination may result in <strong class="font-semibold">different voices for
+                        different text chunks</strong>, leading to inconsistent audio.</p>
+                <p class="mt-2">For consistent voices across chunks, please use:</p>
+                <ul class="list-disc pl-5 mt-1 space-y-1">
+                    <li>"Predefined Voices" mode.</li>
+                    <li>"Voice Cloning" mode.</li>
+                    <li>A specific integer in "Generation Seed" (not random).</li>
+                </ul>
+            </div>
+            <div class="mt-4 mb-5 flex items-center">
+                <input type="checkbox" id="hide-chunk-warning-checkbox"
+                    class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:focus:ring-offset-slate-800 dark:checked:bg-indigo-500 dark:checked:border-indigo-500">
+                <label for="hide-chunk-warning-checkbox"
+                    class="ml-2 block text-sm text-slate-700 dark:text-slate-300 cursor-pointer">Do not show this
+                    warning again</label>
+            </div>
+            <div class="modal-actions">
+                <button id="chunk-warning-cancel" type="button" class="btn-secondary">Cancel Generation</button>
+                <button id="chunk-warning-ok" type="button" class="btn-primary">Proceed Anyway</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="generation-warning-modal" class="modal-overlay hidden opacity-0" data-state="closed">
+        <div class="modal-box">
+            <h3 class="modal-title">Generation Quality Notice</h3>
+            <div class="modal-content">
+                <p>Please be aware that text-to-speech models may sometimes produce unexpected results or artifacts.</p>
+                <p class="mt-2">This can include variations in voice consistency, delivery, or minor audio
+                    imperfections. Experiment with parameters for best results.</p>
+            </div>
+            <div class="mt-4 mb-5 flex items-center">
+                <input type="checkbox" id="hide-generation-warning-checkbox"
+                    class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:focus:ring-offset-slate-800 dark:checked:bg-indigo-500 dark:checked:border-indigo-500">
+                <label for="hide-generation-warning-checkbox"
+                    class="ml-2 block text-sm text-slate-700 dark:text-slate-300 cursor-pointer">Do not show this
+                    warning again</label>
+            </div>
+            <div class="modal-actions">
+                <button id="generation-warning-acknowledge" type="button" class="btn-primary">Acknowledge &
+                    Generate</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/ui/script.js" defer></script>
+</body>
+
+</html>
