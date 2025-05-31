@@ -44,7 +44,7 @@ ui_state:
   last_split_text_enabled: true
   hide_chunk_warning: false
   hide_generation_warning: true
-  theme: dark
+  theme: light
 ui:
   title: Chatterbox TTS Server
   show_language_select: true
