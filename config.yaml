@@ -30,23 +30,16 @@ audio_output:
   sample_rate: 24000
   max_reference_duration_sec: 30
 ui_state:
-  last_text: 'The pursuit of knowledge is a journey, not a destination. Each discovery,
-    no matter how small, illuminates a new path, revealing further questions and mysteries
-    yet to be unraveled. It requires patience, persistence, and an unwavering curiosity
-    about the world around us and the universe beyond. Sometimes,
-    the most profound insights come not from grand experiments, but from quiet contemplation
-    and the willingness to challenge our own assumptions. What we think we know today
-    may simply be a stepping stone to a deeper understanding tomorrow. Therefore,
-    we must remain humble in our quest, always open to new perspectives and the possibility
-    that our current map of reality is incomplete. This continuous cycle of learning,
-    questioning, and re-evaluating is the very essence of intellectual growth and
-    the driving force behind human progress.
+  last_text: 'Are you tired of slow, unreliable connections? Upgrade today to Quantum
+    Fiber, the fastest internet in the galaxy! Experience seamless streaming, lag-free
+    gaming, and instant downloads. Call now and get your first three months half price!
+    Don''t wait, this offer won''t last forever!
 
     '
-  last_voice_mode: clone
+  last_voice_mode: predefined
   last_predefined_voice: Emily.wav
   last_reference_file: Gianna.wav
-  last_seed: 555
+  last_seed: 3000
   last_chunk_size: 240
   last_split_text_enabled: true
   hide_chunk_warning: false
