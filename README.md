@@ -198,13 +198,16 @@ Skip this step if you only have a CPU.
         # Example (replace with your actual command for your CUDA version):
         pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
         ```
+    *   ⚠️ **Important: You can safely ignore potential dependency conflicts:**
+        After running the command above to install a specific CUDA-enabled PyTorch version, `pip` might display "ERROR: pip's dependency resolver..." messages, often indicating that `chatterbox-tts` (or another package) requires a different version of `torch` or `torchaudio` than the one you just installed (e.g., `chatterbox-tts X.Y.Z requires torch==A.B.C, but you have torch A.B.D+cuXYZ which is incompatible`).
+        **For these specific errors related to `torch` and `torchaudio` versions after installing the CUDA variant:** If the CUDA verification in Step 4c is successful (i.e., `torch.cuda.is_available()` returns `True`), these particular dependency conflict messages from `pip` can often be **safely ignored**. The server should still run correctly with GPU acceleration. The key is that PyTorch itself recognizes your CUDA setup.
 
 *   **Step 4c: Verify PyTorch CUDA Installation**
     *   In your activated `(venv)`, run `python` and execute the following single line:
         ```python
         import torch; print(f"PyTorch version: {torch.__version__}"); print(f"CUDA available: {torch.cuda.is_available()}"); print(f"Device name: {torch.cuda.get_device_name(0)}") if torch.cuda.is_available() else None; exit()
         ```
-    *   If `CUDA available:` shows `True`, the setup was successful. If `False`, double-check driver installation and the PyTorch install command.
+    *   If `CUDA available:` shows `True`, the setup was successful. If `False`, double-check driver installation and the PyTorch install command, and ensure you are in the correct virtual environment.
 
 ## ⚙️ Configuration
 
