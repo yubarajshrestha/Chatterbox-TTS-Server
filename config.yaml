@@ -20,7 +20,7 @@ paths:
   output: outputs
 generation_defaults:
   temperature: 0.8
-  exaggeration: 0.5
+  exaggeration: 1.3
   cfg_weight: 0.5
   seed: 0
   speed_factor: 1.0
@@ -43,7 +43,7 @@ ui_state:
   last_chunk_size: 240
   last_split_text_enabled: true
   hide_chunk_warning: false
-  hide_generation_warning: true
+  hide_generation_warning: false
   theme: light
 ui:
   title: Chatterbox TTS Server
