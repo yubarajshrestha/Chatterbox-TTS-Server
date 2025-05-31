@@ -232,10 +232,16 @@ The server relies exclusively on `config.yaml` for runtime configuration.
 
 ## ▶️ Running the Server
 
-**Note on Model Downloads:**
-The first time you run the server, `ChatterboxTTS.from_pretrained()` (called by `engine.py`) will download the required model files from Hugging Face Hub to your local Hugging Face cache (e.g., `~/.cache/huggingface/hub`). This may take some time. Monitor the terminal logs for progress. The server starts fully *after* downloads complete.
+**Important Note on Model Downloads (First Run):**
+The very first time you start the server, it needs to download the `chatterbox-tts` model files from Hugging Face Hub. This is an **automatic, one-time process** (per model version, or until your Hugging Face cache is cleared).
 
-You can *optionally* use the `python download_model.py` script to pre-download specific model components to the `./model_cache` directory defined in `config.yaml`. However, the runtime engine (`engine.py`) loads the model from the Hugging Face Hub cache directly, not this local `model_cache` directory.
+*   ⏳ **Please be patient:** This download can take several minutes, depending on your internet speed and the size of the model files (typically a few gigabytes).
+*   📝 **Monitor your terminal:** You'll see progress indicators or logs related to the download. The server will only become fully operational and accessible *after* these essential model files are successfully downloaded and loaded.
+*   ✔️ **Subsequent starts will be much faster** as the server will use the already downloaded models from your local Hugging Face cache.
+
+You can *optionally* use the `python download_model.py` script to pre-download specific model components to the `./model_cache` directory defined in `config.yaml`. However, please note that the runtime engine (`engine.py`) primarily loads the model from the main Hugging Face Hub cache directly, not this specific local `model_cache` directory.
+
+**Steps to Run:**
 
 1.  **Activate the virtual environment (if not activated):**
     *   Linux/macOS: `source venv/bin/activate`
@@ -244,9 +250,9 @@ You can *optionally* use the `python download_model.py` script to pre-download s
     ```bash
     python server.py
     ```
-3.  **Access the UI:** The server should automatically attempt to open the Web UI in your default browser after startup. If it doesn't for any reason, manually navigate to `http://localhost:PORT` (e.g., `http://localhost:8000` if default port is 8000).
-4.  **Access API Docs:** Open `http://localhost:PORT/docs`.
-5.  **Stop the server:** Press `CTRL+C` in the terminal.
+3.  **Access the UI:** After the server starts (and completes any initial model downloads), it should automatically attempt to open the Web UI in your default browser. If it doesn't, manually navigate to `http://localhost:PORT` (e.g., `http://localhost:8000` if your configured port is 8000).
+4.  **Access API Docs:** Open `http://localhost:PORT/docs` for interactive API documentation.
+5.  **Stop the server:** Press `CTRL+C` in the terminal where the server is running.
 
 ## 🐳 Docker Installation
 
