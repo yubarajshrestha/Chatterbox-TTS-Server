@@ -15,7 +15,7 @@ import numpy as np
 import librosa  # For potential direct use if needed, though utils.py handles most
 from pathlib import Path
 from contextlib import asynccontextmanager
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 import webbrowser  # For automatic browser opening
 import threading  # For automatic browser opening
 
@@ -66,6 +66,16 @@ from models import (  # Pydantic models
     UpdateStatusResponse,
 )
 import utils  # Utility functions
+
+from pydantic import BaseModel, Field
+
+class OpenAISpeechRequest(BaseModel):
+    model: str
+    input_: str = Field(..., alias="input")
+    voice: str
+    response_format: Literal["wav", "opus", "mp3"] = "wav"  # Add "mp3"
+    speed: float = 1.0
+    seed: Optional[int] = None
 
 # --- Logging Configuration ---
 log_file_path_obj = get_log_file_path()
@@ -890,6 +900,74 @@ async def custom_tts_endpoint(
     return StreamingResponse(
         io.BytesIO(encoded_audio_bytes), media_type=media_type, headers=headers
     )
+
+@app.post("/v1/audio/speech", tags=["OpenAI Compatible"])
+async def openai_speech_endpoint(request: OpenAISpeechRequest):
+    # Determine the audio prompt path based on the voice parameter
+    predefined_voices_path = get_predefined_voices_path(ensure_absolute=True)
+    reference_audio_path = get_reference_audio_path(ensure_absolute=True)
+    voice_path_predefined = predefined_voices_path / request.voice
+    voice_path_reference = reference_audio_path / request.voice
+
+    if voice_path_predefined.is_file():
+        audio_prompt_path = voice_path_predefined
+    elif voice_path_reference.is_file():
+        audio_prompt_path = voice_path_reference
+    else:
+        raise HTTPException(status_code=404, detail=f"Voice file '{request.voice}' not found.")
+
+    # Check if the TTS model is loaded
+    if not engine.MODEL_LOADED:
+        raise HTTPException(status_code=503, detail="TTS engine model is not currently loaded or available.")
+
+    try:
+        # Use the provided seed or the default
+        seed_to_use = request.seed if request.seed is not None else get_gen_default_seed()
+
+        # Synthesize the audio
+        audio_tensor, sr = engine.synthesize(
+            text=request.input_,
+            audio_prompt_path=str(audio_prompt_path),
+            temperature=get_gen_default_temperature(),
+            exaggeration=get_gen_default_exaggeration(),
+            cfg_weight=get_gen_default_cfg_weight(),
+            seed=seed_to_use,
+        )
+
+        if audio_tensor is None or sr is None:
+            raise HTTPException(status_code=500, detail="TTS engine failed to synthesize audio.")
+
+        # Apply speed factor if not 1.0
+        if request.speed != 1.0:
+            audio_tensor, _ = utils.apply_speed_factor(audio_tensor, sr, request.speed)
+
+        # Convert tensor to numpy array
+        audio_np = audio_tensor.cpu().numpy()
+
+        # Ensure it's 1D
+        if audio_np.ndim == 2:
+            audio_np = audio_np.squeeze()
+
+        # Encode the audio to the requested format
+        encoded_audio = utils.encode_audio(
+            audio_array=audio_np,
+            sample_rate=sr,
+            output_format=request.response_format,
+            target_sample_rate=get_audio_sample_rate(),
+        )
+
+        if encoded_audio is None:
+            raise HTTPException(status_code=500, detail="Failed to encode audio.")
+
+        # Determine the media type
+        media_type = f"audio/{request.response_format}"
+
+        # Return the streaming response
+        return StreamingResponse(io.BytesIO(encoded_audio), media_type=media_type)
+
+    except Exception as e:
+        logger.error(f"Error in openai_speech_endpoint: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # --- Main Execution ---
