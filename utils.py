@@ -11,6 +11,7 @@ import io
 import uuid
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, Set, List
+from pydub import AudioSegment
 
 import numpy as np
 import soundfile as sf
@@ -223,7 +224,7 @@ def encode_audio(
     Args:
         audio_array: NumPy array containing audio data (expected as float32, range [-1, 1]).
         sample_rate: Sample rate of the input audio data.
-        output_format: Desired output format ('opus' or 'wav').
+        output_format: Desired output format ('opus', 'wav' or 'mp3').
         target_sample_rate: Optional target sample rate to resample to before encoding.
 
     Returns:
@@ -331,6 +332,18 @@ def encode_audio(
                 format="wav",
                 subtype="pcm_16",
             )
+
+        elif output_format == "mp3":
+            audio_clipped = np.clip(audio_array, -1.0, 1.0)
+            audio_int16 = (audio_clipped * 32767).astype(np.int16)
+            audio_segment = AudioSegment(
+            audio_int16.tobytes(),
+            frame_rate=sample_rate,
+            sample_width=2,
+            channels=1,
+            )
+            audio_segment.export(output_buffer, format="mp3")
+
         else:
             logger.error(
                 f"Unsupported output format requested for encoding: {output_format}"
