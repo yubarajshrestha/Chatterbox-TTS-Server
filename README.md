@@ -250,7 +250,7 @@ You can *optionally* use the `python download_model.py` script to pre-download s
     ```bash
     python server.py
     ```
-3.  **Access the UI:** After the server starts (and completes any initial model downloads), it should automatically attempt to open the Web UI in your default browser. If it doesn't, manually navigate to `http://localhost:PORT` (e.g., `http://localhost:8000` if your configured port is 8000).
+3.  **Access the UI:** After the server starts (and completes any initial model downloads), it should automatically attempt to open the Web UI in your default browser. If it doesn't, manually navigate to `http://localhost:PORT` (e.g., `http://localhost:8004` if your configured port is 8004).
 4.  **Access API Docs:** Open `http://localhost:PORT/docs` for interactive API documentation.
 5.  **Stop the server:** Press `CTRL+C` in the terminal where the server is running.
 
