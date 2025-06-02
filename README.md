@@ -26,7 +26,7 @@ The [Chatterbox TTS model by Resemble AI](https://github.com/resemble-ai/chatter
 
 We solve the complexity of setting up and running the model by offering:
 
-*   A **modern Web UI** for easy experimentation, preset loading, reference audio management, and generation parameter tuning. The interface design draws inspiration from projects like **[Lex-au's Orpheus-FastAPI](https://github.com/Lex-au/Orpheus-FastAPI)**.
+*   A **modern Web UI** for easy experimentation, preset loading, reference audio management, and generation parameter tuning. The interface design draws inspiration from projects like [Lex-au's Orpheus-FastAPI](https://github.com/Lex-au/Orpheus-FastAPI).
 *   **Large Text Handling:** Intelligently splits long plain text inputs into manageable chunks based on sentence structure, processes them sequentially, and seamlessly concatenates the audio.
 *   **Predefined Voices:** Select from curated, ready-to-use synthetic voices for consistent and reliable output without cloning setup.
 *   **Voice Cloning:** Generate speech using a voice similar to an uploaded reference audio file.
