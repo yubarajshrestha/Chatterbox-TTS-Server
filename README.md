@@ -22,7 +22,7 @@ This server is based on the architecture and UI of our [Dia-TTS-Server](https://
 
 ## 🗣️ Overview: Enhanced Chatterbox TTS Generation
 
-The [Chatterbox TTS model by Resemble AI](https://github.com/resemble-ai/chatterbox) provides capabilities for generating high-quality speech. This project builds upon that foundation by providing a robust **[FastAPI](https://fastapi.tiangolo.com/) server** that makes Chatterbox significantly easier to use and integrate. The server expects plain text input for synthesis.
+The [Chatterbox TTS model by Resemble AI](https://github.com/resemble-ai/chatterbox) provides capabilities for generating high-quality speech. This project builds upon that foundation by providing a robust [FastAPI](https://fastapi.tiangolo.com/) server that makes Chatterbox significantly easier to use and integrate. The server expects plain text input for synthesis.
 
 We solve the complexity of setting up and running the model by offering:
 
