@@ -254,6 +254,111 @@ You can *optionally* use the `python download_model.py` script to pre-download s
 4.  **Access API Docs:** Open `http://localhost:PORT/docs` for interactive API documentation.
 5.  **Stop the server:** Press `CTRL+C` in the terminal where the server is running.
 
+## 🔄 Updating to the Latest Version
+
+Follow these steps to update your existing installation to the latest version from GitHub while preserving your local configuration.
+
+**1. Navigate to Your Project Directory**
+```bash
+cd chatterbox-tts-server
+```
+
+**2. Activate Your Virtual Environment**
+
+*   **Windows (PowerShell):**
+    ```powershell
+    .\venv\Scripts\activate
+    # Your prompt should now start with (venv)
+    ```
+
+*   **Linux (Bash):**
+    ```bash
+    source venv/bin/activate
+    # Your prompt should now start with (venv)
+    ```
+
+**3. Backup Your Configuration**
+
+⚠️ **Important:** Always backup your `config.yaml` before updating to preserve your custom settings.
+
+```bash
+# Create a backup of your current configuration
+cp config.yaml config.yaml.backup
+```
+
+**4. Update the Repository**
+
+Choose one of the following methods based on your needs:
+
+*   **Standard Update (recommended):**
+    ```bash
+    git pull origin main
+    ```
+    If you encounter merge conflicts with `config.yaml`, continue to Step 5.
+
+*   **Force Update (if you have conflicts or want to ensure clean update):**
+    ```bash
+    # Fetch latest changes and reset to match remote exactly
+    git fetch origin
+    git reset --hard origin/main
+    ```
+
+**5. Restore Your Configuration**
+
+```bash
+# Restore your backed-up configuration
+cp config.yaml.backup config.yaml
+```
+
+**6. Check for New Configuration Options**
+
+⭐ **Recommended:** Compare your restored config with the new default config to see if there are new options you might want to adopt:
+
+```bash
+# View differences between your config and the new default
+# (The new default is temporarily in config.yaml.backup if you used force update)
+# Or check the repository's config.yaml to see what changed
+```
+
+**7. Update Dependencies**
+
+⭐ **Important:** Always update dependencies after pulling changes, as new versions may include additional or updated packages.
+
+```bash
+# Upgrade pip (recommended)
+pip install --upgrade pip
+
+# Install/update project requirements
+pip install -r requirements.txt
+```
+
+**8. GPU Users: Verify PyTorch Installation**
+
+If you have an NVIDIA GPU and previously installed CUDA-enabled PyTorch, verify it's still correctly installed:
+
+```bash
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+```
+
+If `CUDA available: False`, you may need to reinstall PyTorch with CUDA support following **Step 4** from the Installation section.
+
+**9. Restart the Server**
+
+If the server was running, stop it (`CTRL+C`) and restart:
+
+```bash
+python server.py
+```
+
+⭐ **Note:** Your custom settings in `config.yaml` are preserved with this method. The server will automatically add any new configuration options with default values if needed. You can safely delete `config.yaml.backup` once you've verified everything works correctly.
+
+⭐ **Docker Users:** If using Docker and you have a local `config.yaml` mounted as a volume, the same backup/restore process applies before running:
+```bash
+docker compose down
+docker compose pull  # if using pre-built images
+docker compose up -d --build
+```
+
 ## 🐳 Docker Installation
 
 Run Chatterbox TTS Server easily using Docker. The recommended method uses Docker Compose.
