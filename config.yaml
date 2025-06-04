@@ -11,7 +11,7 @@ server:
 model:
   repo_id: ResembleAI/chatterbox
 tts_engine:
-  device: cuda
+  device: cpu
   predefined_voices_path: voices
   reference_audio_path: reference_audio
   default_voice_id: Emily.wav
