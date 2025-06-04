@@ -40,6 +40,44 @@ def set_seed(seed_value: int):
     logger.info(f"Global seed set to: {seed_value}")
 
 
+def load_model_safely(device: str) -> ChatterboxTTS:
+    """
+    Custom loader function to safely load the model on any device.
+    Ensures that models saved with CUDA tensors can be loaded on CPU devices.
+
+    Args:
+        device: Target device ('cuda' or 'cpu')
+
+    Returns:
+        ChatterboxTTS: The loaded model
+    """
+    # Use map_location to ensure tensors are loaded on the correct device
+    map_location = None if device == "cuda" and torch.cuda.is_available() else torch.device("cpu")
+
+    # Override torch.load to use our map_location
+    original_torch_load = torch.load
+
+    def patched_torch_load(f, *args, **kwargs):
+        # Add map_location if not explicitly provided
+        if "map_location" not in kwargs:
+            kwargs["map_location"] = map_location
+        return original_torch_load(f, *args, **kwargs)
+
+    # Temporarily replace torch.load
+    torch.load = patched_torch_load
+
+    try:
+        # Load the model using from_pretrained
+        model = ChatterboxTTS.from_pretrained(device=device)
+        return model
+    except Exception as e:
+        logger.error(f"Error loading model with patched loader: {e}")
+        raise e
+    finally:
+        # Restore original torch.load
+        torch.load = original_torch_load
+
+
 def load_model() -> bool:
     """
     Loads the TTS model.
@@ -82,11 +120,8 @@ def load_model() -> bool:
             f"Attempting to load model directly using from_pretrained (expected from Hugging Face repository: {model_repo_id_config} or library default)."
         )
         try:
-            # Directly use from_pretrained. This will utilize the standard Hugging Face cache.
-            # The ChatterboxTTS.from_pretrained method handles downloading if the model is not in the cache.
-            chatterbox_model = ChatterboxTTS.from_pretrained(device=model_device)
-            # The actual repo ID used by from_pretrained is often internal to the library,
-            # but logging the configured one provides user context.
+            # Use our custom safe loader function instead of the direct method
+            chatterbox_model = load_model_safely(device=model_device)
             logger.info(
                 f"Successfully loaded TTS model using from_pretrained (expected from '{model_repo_id_config}' or library default)."
             )
